@@ -39,17 +39,17 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 TELEGRAM_TOKEN  = "8731868942:AAEKTM-hbrskq52V3wFtoKfUEr2Hn5-mrHQ"
 CHAT_ID         = "181943757"
 
-MIN_SCORE       = 20    # порог срабатывания
-TOP_RESULTS     = 10     # топ сигналов в одном сообщении
+MIN_SCORE       = 25    # порог срабатывания
+TOP_RESULTS     = 7     # топ сигналов в одном сообщении
 SCAN_HOURS      = 0.5   # каждые 30 минут
 SLEEP_REQ       = 0.05  # пауза между запросами
 WORKERS         = 8     # параллельных потоков
 
 # Пороги фазы 2 — можно настраивать
-OI_24H_MIN      = 2     # минимальный рост OI за 3-6ч (%)
-PRICE_CHG_MAX   = 35    # максимальное изменение цены за 6ч (%)
-BASE_RANGE_MAX  = 100    # максимальный диапазон базы (%)
-DOWNTREND_MAX   = -45   # порог даунтренда перед базой (%)
+OI_24H_MIN      = 3     # минимальный рост OI за 3-6ч (%)
+PRICE_CHG_MAX   = 25    # максимальное изменение цены за 6ч (%)
+BASE_RANGE_MAX  = 80    # максимальный диапазон базы (%)
+DOWNTREND_MAX   = -35   # порог даунтренда перед базой (%)
 
 # ══════════════════════════════════════════════════════════════
 #  ЛОГИРОВАНИЕ
@@ -217,7 +217,7 @@ def pattern_d(symbol, k1d, k1h, oi_d, oi_1h):
     d['natr_now_1d'] = natr_now_1d
 
     # База: NATR был низким — цена стояла тихо
-    if natr_base_mean > 12:
+    if natr_base_mean > 8:
         return 0, {}  # слишком волатильная база
     if natr_base_mean < 1:   score += 30
     elif natr_base_mean < 2: score += 24
@@ -235,7 +235,7 @@ def pattern_d(symbol, k1d, k1h, oi_d, oi_1h):
         d['natr_awakening'] = natr_awaken
 
         # Пробуждение: NATR начал расти — рынок просыпается
-        if natr_awaken > 4:
+        if natr_awaken > 3:
             return 0, {}  # слишком резко — уже памп
         if natr_awaken > 1.8:   score += 25  # активное пробуждение
         elif natr_awaken > 1.3: score += 16  # начинает просыпаться
@@ -243,7 +243,7 @@ def pattern_d(symbol, k1d, k1h, oi_d, oi_1h):
     else:
         d['natr_awakening'] = None
 
-    # Диапазон базы — ищем лучшее окно от 6 до 180 дней
+    # База: ищем лучшее окно от 6 до 180 дней
     best_base_window = None
     best_base_range  = 999
     for bw in [6, 10, 14, 20, 30, 45, 60, 90, 120, 180]:
@@ -258,6 +258,10 @@ def pattern_d(symbol, k1d, k1h, oi_d, oi_1h):
             best_base_window = bw
 
     if best_base_window is None or best_base_window < 6:
+        return 0, {}
+
+    # Короткая база (6-13д) должна быть очень тихой
+    if best_base_window < 14 and best_base_range > 12:
         return 0, {}
 
     base_window = best_base_window
@@ -334,7 +338,7 @@ def pattern_d(symbol, k1d, k1h, oi_d, oi_1h):
     if len(oi_1h) >= 3:
         oi_now_check = oi_1h['oi'].iloc[-1]
         oi_3h_check  = oi_1h['oi'].iloc[-3]
-        if oi_now_check < oi_3h_check * 1.002:
+        if oi_now_check < oi_3h_check * 1.005:
             return 0, {}  # OI не растёт активно прямо сейчас
         oi_last = oi_1h['oi'].iloc[-1]
         oi_prev = oi_1h['oi'].iloc[-2]
@@ -354,7 +358,7 @@ def pattern_d(symbol, k1d, k1h, oi_d, oi_1h):
 
     # Угол как фильтр — слишком вертикально = spike/памп
     best_angle = max(angle_6h, angle_12h)
-    if best_angle > 82:
+    if best_angle > 78:
         return 0, {}  # вертикальный spike
 
     # Равномерность OI за 12 часов — не spike
@@ -453,9 +457,10 @@ def fmt_signal(r, rank):
     oi12  = r.get('oi_12h_growth_pct', '?')
     angle = r.get('oi_angle_12h', r.get('oi_angle_6h', '?'))
 
-    # Метка качества
-    if score >= 80:   badge = " 🔥 EXCEPTIONAL"
-    elif score >= 70: badge = " ⚡ STRONG"
+    if score >= 90:   badge = " 🔥 EXCEPTIONAL"
+    elif score >= 85: badge = " ⚡ STRONG+"
+    elif score >= 75: badge = " STRONG"
+    elif score >= 60: badge = " AVERAGE"
     else:             badge = ""
 
     lines = [
