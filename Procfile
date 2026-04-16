@@ -1,1 +1,1 @@
-worker: python new screener 16042026.py
+worker: python scanner 1 odnofazniy DO
