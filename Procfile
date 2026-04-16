@@ -1,1 +1,1 @@
-worker: python scanner1_accumulation.py
+web: python scanner1_accumulation.py
