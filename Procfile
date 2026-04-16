@@ -1,1 +1,1 @@
-worker: python scanner 1 odnofazniy DO
+worker: python scanner1604
