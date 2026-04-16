@@ -1,1 +1,1 @@
-worker: python scanner1_accumulation.py
+worker: python new screener 16042026.py
