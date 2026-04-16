@@ -1,1 +1,1 @@
-worker: python scanner1604
+worker: python scanner1604.py
