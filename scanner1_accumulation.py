@@ -325,20 +325,21 @@ def pattern_d(symbol, k1d, k1h, oi_d, oi_1h):
     else:
         d['oi_falling'] = False
 
-    # EMA20 фильтр — не должна падать (даунтренд)
+    # EMA20 фильтр — не должна падать
     ema20 = k1d['close'].ewm(span=20, adjust=False).mean()
     if len(ema20) >= 5 and ema20.iloc[-1] < ema20.iloc[-4]:
-        return 0, {}  # EMA20 падает — пропуск
+        return 0, {}  # EMA20 падает — даунтренд
 
-    # OI/цена ratio — мощный рост OI при тихой цене = бонус
-    if price_chg_6h > 0.1:
-        oi_price_ratio = round(oi_best / price_chg_6h, 1)
-    else:
-        oi_price_ratio = oi_best * 10  # цена стоит — ratio очень высокий
+    # OI / Цена ratio — главная метрика
+    # Чем больше OI растёт относительно движения цены — тем лучше
+    price_move = max(price_chg_6h, 0.1)  # минимум 0.1% чтоб не делить на 0
+    oi_price_ratio = round(oi_best / price_move, 1)
     d['oi_price_ratio'] = oi_price_ratio
-    if oi_price_ratio > 50:   score += 15  # OI растёт сильно, цена стоит
-    elif oi_price_ratio > 20: score += 10
-    elif oi_price_ratio > 10: score += 5
+
+    if oi_price_ratio >= 30:   score += 20  # OI мощно растёт, цена стоит
+    elif oi_price_ratio >= 15: score += 14
+    elif oi_price_ratio >= 8:  score += 8
+    elif oi_price_ratio >= 4:  score += 4
 
     # Угол наклона OI на 6h и 12h окнах
     angle_6h  = oi_slope_angle(oi_1h['oi'].iloc[-6:])
@@ -348,8 +349,8 @@ def pattern_d(symbol, k1d, k1h, oi_d, oi_1h):
 
     # Угол как фильтр — слишком вертикально = spike/памп
     best_angle = max(angle_6h, angle_12h)
-    if best_angle > 78:
-        return 0, {}  # вертикальный spike
+    if best_angle > 75:
+        return 0, {}  # вертикальный spike — уже памп
 
     # Равномерность OI за 12 часов — не spike
     oi_window = min(12, len(oi_1h))
