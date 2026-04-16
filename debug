@@ -670,7 +670,7 @@ def debug_symbol(sym):
 if __name__ == "__main__":
     import sys
 
-    # Режим отладки: python scanner1_accumulation.py DEBUG INUSDT
+    # Режим отладки: python scanner1694.py DEBUG INUSDT
     if len(sys.argv) == 3 and sys.argv[1] == "DEBUG":
         debug_symbol(sys.argv[2].upper())
     else:
