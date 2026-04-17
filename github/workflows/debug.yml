@@ -1,0 +1,18 @@
+name: Scanner Debug
+on:
+  workflow_dispatch:
+    inputs:
+      symbol:
+        description: 'Symbol'
+        required: true
+        default: 'INUSDT'
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas numpy apscheduler
+      - run: python scanner1_accumulation.py DEBUG ${{ github.event.inputs.symbol }}
